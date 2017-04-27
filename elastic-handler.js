@@ -11,13 +11,13 @@ const http = require('http');
 const url = require('url');
 const net = require('net');
 const stream = require('stream');
-const Transform = stream.Transform;
-const textNet = require('text-net');
 const HTTPParser = require('http-parser-js').HTTPParser;
-const textUtil = require('../text-util');
-const ByteCounter = textUtil.ByteCounter;
-const rawHeadersToMap = textUtil.rawHeadersToMap;
-const getOption = textUtil.getOption;
+const rnju = require('@rankwave/nodejs-util');
+
+const Transform = stream.Transform;
+const ByteCounter = rnju.stream.ByteCounter;
+const rawHeadersToMap = rnju.http.rawHeadersToMap;
+const getOption = rnju.common.getOption;
 
 function createElasticHandler(workerPool, options)
 {
@@ -28,7 +28,9 @@ function createElasticHandler(workerPool, options)
 	function proxyConnect(/* IncomingMessage */ req, /* Socket */ cltSocket, /* Buffer */ head) 
 	{
 		if ( logEvent )
+		{
 			console.log(`REQ ${cltSocket.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+		}
 		
 		var responseSent = false;
 		var isPiped = false;
@@ -130,13 +132,17 @@ function createElasticHandler(workerPool, options)
 	
 		cltSocket.on('end', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('server "connect" cltSocket "end"');
+			}
 			onCltSocketCloseOrError();
 		});
 		
 		cltSocket.on('close', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('server "connect" cltSocket "close"');
+			}
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
@@ -156,7 +162,9 @@ function createElasticHandler(workerPool, options)
 		
 		session.on('data', (chunk) => {
 			if ( logEvent )
+			{
 				console.log('server "connect" session "data"');
+			}
 			resParser.execute(chunk);
 		});
 		
@@ -176,7 +184,9 @@ function createElasticHandler(workerPool, options)
 		
 		session.on('end', () => {
 			if ( logEvent )
+			{
 				console.log('server "connect" session "end"');
+			}
 			onSessionCloseOrError();
 		});
 		
@@ -231,7 +241,9 @@ function createElasticHandler(workerPool, options)
 		var responseSent = false;
 		
 		if ( logEvent )
+		{
 			console.log(`REQ ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+		}
 		
 		if ( !/^http:\/\/[0-9a-z\-]+/i.test(req.url) )
 		{
@@ -264,7 +276,9 @@ function createElasticHandler(workerPool, options)
 		
 		resParser.onHeadersComplete = function(info) {
 			if ( logEvent )
+			{
 				console.log('server "request" resParser "onHeaderComplete"');
+			}
 			var responseHeaders = rawHeadersToMap(info.headers);
 			stat.statusCode = info.statusCode;
 			res.writeHead(info.statusCode, info.statusMessage, responseHeaders);
@@ -281,14 +295,18 @@ function createElasticHandler(workerPool, options)
 		
 		resParser.onHeaders = function(headers) {
 			if ( logEvent )
+			{
 				console.log('server "request" resParser "onHeaders"');
+			}
 			var trailers = rawHeadersToMap(headers);
 			res.addTrailers(trailers);
 		};
 		
 		resParser.onMessageComplete = function() {
 			if ( logEvent )
+			{
 				console.log('server "request" resParser "onMessageComplete"');
+			}
 			res.end();
 		};
 	
@@ -303,7 +321,9 @@ function createElasticHandler(workerPool, options)
 		
 		session.on('end', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" session "end"');
+			}
 			resParser.finish();
 		});
 		
@@ -351,14 +371,18 @@ function createElasticHandler(workerPool, options)
 		// request has been aborted by the client and the network socket has closed.
 		req.on('aborted', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" req "aborted"');
+			}
 			onRequestCloseOrError();
 		});
 		
 		// Indicates that the underlying connection was closed. Just like 'end', this event occurs only once per response.
 		req.on('close', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" req "close"');
+			}
 			onRequestCloseOrError();
 		});
 		
@@ -378,24 +402,31 @@ function createElasticHandler(workerPool, options)
 		// Emitted when the response has been sent		
 		res.on('finish', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" res "finish"');
-			
-			stat.ellipse = Date.now() - stat.ellipse;
+			}
 			
 			if ( logAccess )
+			{
+				stat.ellipse = Date.now() - stat.ellipse;
 				console.log(`RES ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+			}
 		});
 		
 		// Indicates that the underlying connection was terminated before response.end() was called or able to flush.
 		res.on('close', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" res "close"');
+			}
 			onRequestCloseOrError();
 		});
 	
 		res.on('error', (e) => {
 			if ( logEvent )
+			{
 				console.log('server "request" res "error"');
+			}
 			onRequestCloseOrError();
 		});
 	}

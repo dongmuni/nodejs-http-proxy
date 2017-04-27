@@ -10,11 +10,12 @@ const http = require('http');
 const url = require('url');
 const net = require('net');
 const stream = require('stream');
+const rnju = require('@rankwave/nodejs-util');
+
 const Transform = stream.Transform;
-const textUtil = require('../text-util');
-const ByteCounter = textUtil.ByteCounter;
-const rawHeadersToMap = textUtil.rawHeadersToMap;
-const getOption = textUtil.getOption;
+const ByteCounter = rnju.stream.ByteCounter;
+const rawHeadersToMap = rnju.http.rawHeadersToMap;
+const getOption = rnju.common.getOption;
 
 function createDefaultHandler(options)
 {
@@ -25,7 +26,9 @@ function createDefaultHandler(options)
 	function proxyConnect(/* IncomingMessage */ req, /* Socket */ cltSocket, /* Buffer */ head) 
 	{
 		if ( logEvent )
+		{
 			console.log(`REQ ${cltSocket.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+		}
 		
 		var responseSent = false;
 		
@@ -53,15 +56,21 @@ function createDefaultHandler(options)
 		
 		cltSocket.on('end', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('server "connect" cltSocket "end"');
+			}
 		});
 		
 		cltSocket.on('close', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('server "connect" cltSocket "close"');
-			stat.ellipse = Date.now() - stat.ellipse;
+			}
 			if ( logAccess )
+			{
+				stat.ellipse = Date.now() - stat.ellipse;
 				console.log(`RES ${cltSocket.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+			}
 		});
 		
 		cltSocket.on('error', (e) => {
@@ -76,12 +85,16 @@ function createDefaultHandler(options)
 		
 		srvSocket.on('end', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('server "connect" srvSocket "end"');
+			}
 		});
 		
 		srvSocket.on('close', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('server "connect" srvSocket "close"');
+			}
 		});
 		
 		srvSocket.on('error', (e) => {
@@ -120,13 +133,17 @@ function createDefaultHandler(options)
 		// request has been aborted by the client and the network socket has closed.
 		req.on('aborted', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" req "aborted"');
+			}
 		});
 		
 		// Indicates that the underlying connection was closed. Just like 'end', this event occurs only once per response.
 		req.on('close', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" req "close"');
+			}
 		});
 		
 		req.on('error', (e) => {
@@ -144,18 +161,23 @@ function createDefaultHandler(options)
 		// Indicates that the underlying connection was terminated before response.end() was called or able to flush.
 		res.on('close', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" res "close"');
+			}
 		});
 	
 		// Emitted when the response has been sent		
 		res.on('finish', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" res "finish"');
-			
-			stat.ellipse = Date.now() - stat.ellipse;
+			}
 			
 			if ( logAccess )
+			{
+				stat.ellipse = Date.now() - stat.ellipse;
 				console.log(`RES ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+			}
 		});
 		
 		res.on('error', (e) => {
@@ -171,7 +193,9 @@ function createDefaultHandler(options)
 		 *********************************************/
 		
 		if ( logEvent )
+		{
 			console.log(`REQ ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+		}
 		
 		if ( !/^http:\/\/[0-9a-z\-]+/i.test(req.url) )
 		{
@@ -197,12 +221,16 @@ function createDefaultHandler(options)
 			
 			res2.on('abort', () => {
 				if ( logEvent )
+				{
 					console.log('server "request" req2 "response" res2 "abort"');
+				}
 			});
 			
 			res2.on('close', () => {
 				if ( logEvent )
+				{
 					console.log('server "request" req2 "response" res2 "close"');
+				}
 			});
 			
 			res2.on('error', (e) => {
@@ -224,32 +252,44 @@ function createDefaultHandler(options)
 		
 		req2.on('abort', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" req2 "abort"');
+			}
 		});
 		
 		req2.on('aborted', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" req2 "aborted"');
+			}
 		});
 		
 		req2.on('connect', (/* IncomingMessage*/ res2, /* Socket */ socket, /* Buffer */ head) => {
 			if ( logEvent )
+			{
 				console.log('server "request" req2 "connect"');
+			}
 		});
 		
 		req2.on('continue', () => {
 			if ( logEvent )
+			{
 				console.log('server "request" req2 "continue"');
+			}
 		});
 		
 		req2.on('socket', (/* Socket */ socket) => {
 			if ( logEvent )
+			{
 				console.log('server "request" req2 "socket"');
+			}
 		});
 		
 		req2.on('upgrade', (/* IncomingMessage*/ res2, /* Socket */ socket, /* Buffer */ head) => {
 			if ( logEvent )
+			{
 				console.log('server "request" req2 "upgrade"');
+			}
 		});
 		
 		req2.on('error', (e) => {

@@ -7,13 +7,13 @@ const http = require('http');
 const url = require('url');
 const net = require('net');
 const stream = require('stream');
-const Transform = stream.Transform;
-const textNet = require('text-net');
 const HTTPParser = require('http-parser-js').HTTPParser;
-const textUtil = require('../text-util');
-const ByteCounter = textUtil.ByteCounter;
-const rawHeadersToMap = textUtil.rawHeadersToMap;
-const getOption = textUtil.getOption;
+const rnju = require('@rankwave/nodejs-util');
+
+const Transform = stream.Transform;
+const ByteCounter = rnju.stream.ByteCounter;
+const rawHeadersToMap = rnju.http.rawHeadersToMap;
+const getOption = rnju.common.getOption;
 
 /*
  * HTTPParser {
@@ -96,7 +96,9 @@ function createElasticWorker(options)
 		const srvSocket = net.connect(srvUrl.port, srvUrl.hostname, () => {
 			
 			if ( logEvent )
+			{
 				console.log('onConnect srvSocket "connect"');
+			}
 			
 			session.write('HTTP/1.1 200 Connection Established\r\n\r\n');
 			responseSent = true;
@@ -113,13 +115,17 @@ function createElasticWorker(options)
 		
 		srvSocket.on('end', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('onConnect srvSocket "end"');
+			}
 			onSrvSocketClosedOrError();
 		});
 		
 		srvSocket.on('close', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('onConnect srvSocket "close"');
+			}
 			onSrvSocketClosedOrError();
 		});
 		
@@ -147,13 +153,18 @@ function createElasticWorker(options)
 		
 		session.on('end', () => {
 			if ( logEvent )
+			{
 				console.log('onConnect session "end"');
+			}
 			onSessionCloseOrError();
 		});
 		
 		session.on('close', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('onConnect session "close"');
+			}
+			
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
@@ -177,7 +188,9 @@ function createElasticWorker(options)
 	function onHttpConnectSession(session)
 	{
 		if ( logEvent )
+		{
 			console.log('onHttpConnectSession');
+		}
 		
 		var reqParser = new HTTPParser(HTTPParser.REQUEST);
 		
@@ -187,7 +200,9 @@ function createElasticWorker(options)
 		
 		reqParser.onHeadersComplete = function(info) {
 			if ( logEvent )
+			{
 				console.log('onHttpSession reqParser "onHeadersComplete"');
+			}
 			session.removeAllListeners('data');
 			session.removeAllListeners('error');
 			var head = null;
@@ -208,13 +223,16 @@ function createElasticWorker(options)
 	
 		reqParser.onHeaders = function(headers) {
 			if ( logEvent )
+			{
 				console.log('onHttpSession reqParser "onHeaders"');
-			//console.log(headers);
+			}
 		};
 		  
 		reqParser.onMessageComplete = function() {
 			if ( logEvent )
+			{
 				console.log('onHttpSession reqParser "onMessageComplete"');
+			}
 		};
 		
 		/******************************
@@ -264,7 +282,9 @@ function createElasticWorker(options)
 	function onHttpRequestSession(session)
 	{
 		if ( logEvent )
+		{
 			console.log('onHttpRequestSession');
+		}
 		
 		var reqParser = new HTTPParser(HTTPParser.REQUEST);
 		
@@ -289,7 +309,9 @@ function createElasticWorker(options)
 		reqParser.onHeadersComplete = function(info) {
 	
 			if ( logEvent )
+			{
 				console.log('onHttpSession reqParser "onHeadersComplete"');
+			}
 	
 			/******************************************
 			 * handle general http request
@@ -342,13 +364,17 @@ function createElasticWorker(options)
 				
 				res2.on('abort', () => {
 					if ( logEvent )
+					{
 						console.log('onHttpSession reqParser "onHeadersComplete" req2 "response" res2 "abort"');
+					}
 					onResponseAbortOrError();
 				});
 				
 				res2.on('close', () => {
 					if ( logEvent )
+					{
 						console.log('onHttpSession reqParser "onHeadersComplete" req2 "response" res2 "close"');
+					}
 					onResponseAbortOrError();
 				});
 				
@@ -387,12 +413,16 @@ function createElasticWorker(options)
 			
 			req2.on('abort', () => {
 				if ( logEvent )
+				{
 					console.log('onHttpSession reqParser "onHeadersComplete" req2 "abort"');
+				}
 			});
 			
 			req2.on('aborted', () => {
 				if ( logEvent )
+				{
 					console.log('onHttpSession reqParser "onHeadersComplete" req2 "aborted"');
+				}
 				onResponseAbortOrError(new Error('Request is aborted by the remote server.'));
 			});
 			
@@ -422,7 +452,9 @@ function createElasticWorker(options)
 	
 		reqParser.onMessageComplete = function() {
 			if ( logEvent )
+			{
 				console.log('onHttpSession reqParser "onMessageComplete"');
+			}
 			if ( req2 )
 			{
 				req2.end();
@@ -435,13 +467,17 @@ function createElasticWorker(options)
 		
 		session.on('data', (chunk) => {
 			if ( logEvent )
+			{
 				console.log('onHttpSession session "data"');
+			}
 			reqParser.execute(chunk);
 		});
 		
 		session.on('end', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('onHttpSession session "end"');
+			}
 			reqParser.finish();
 		});
 		
@@ -458,7 +494,9 @@ function createElasticWorker(options)
 		
 		session.on('close', (had_error) => {
 			if ( logEvent )
+			{
 				console.log('onHttpSession session "close"');
+			}
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
@@ -481,7 +519,9 @@ function createElasticWorker(options)
 	function onHttpSession(session)
 	{
 		if ( logEvent )
+		{
 			console.log('onHttpSession');
+		}
 		
 		var method = session.session_args[0];
 		

@@ -1,18 +1,28 @@
 {
-  "name": "nodejs-http-proxy",
+  "name": "@rankwave/nodejs-http-proxy",
   "version": "0.1.0",
-  "description": "nodejs-http-proxy",
+  "description": "HTTP Proxy handlers for Node.js http module supports direct proxying, session proxying over text-net.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified! Configure in package.json\" && exit 1"
+    "test": "node test/test.js"
   },
-  "repository": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RANKWAVE/nodejs-http-proxy.git"
+  },
   "keywords": [
-    "node.js",
-    "eclipse",
-    "nodeclipse"
+    "http",
+    "proxy",
+    "handler"
   ],
-  "author": "",
-  "license": "MIT",
-  "readmeFilename": "README.md"
+  "author": "Dongmoon Lim <'dmlim@rankwave.com'> ('http://www.rankwave.net')",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RANKWAVE/nodejs-http-proxy/issues"
+  },
+  "homepage": "https://github.com/RANKWAVE/nodejs-http-proxy#readme",
+  "dependencies": {
+	  "http-parser-js": "*",
+	  "@rankwave/nodejs-util": "*"
+  }
 }
