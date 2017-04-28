@@ -1,6 +1,6 @@
 {
   "name": "@rankwave/nodejs-http-proxy",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "HTTP Proxy handlers for Node.js http module supports direct proxying, session proxying over text-net.",
   "main": "index.js",
   "scripts": {
