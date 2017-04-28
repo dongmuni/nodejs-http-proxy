@@ -16,6 +16,7 @@ const Transform = stream.Transform;
 const ByteCounter = rnju.stream.ByteCounter;
 const rawHeadersToMap = rnju.http.rawHeadersToMap;
 const getOption = rnju.common.getOption;
+const ipv4 = rnju.common.ipv4;
 
 function createDefaultHandler(options)
 {
@@ -25,22 +26,22 @@ function createDefaultHandler(options)
 	
 	function proxyConnect(/* IncomingMessage */ req, /* Socket */ cltSocket, /* Buffer */ head) 
 	{
+		var remoteAddress = ipv4(cltSocket.remoteAddress);
+		
 		if ( logEvent )
 		{
-			console.log(`REQ ${cltSocket.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+			console.log(`REQ ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
 		}
 		
 		var responseSent = false;
 		
 		var stat = {
-				bytesRead: 0,
-				bytesWrite: 0,
 				statusCode: 200,
 				ellipse: Date.now(),
 		};
 		
-		var reqCounter = new ByteCounter(() => stat.bytesRead = reqCounter.bytesPiped);
-		var resCounter = new ByteCounter(() => stat.bytesWrite = resCounter.bytesPiped);
+		var reqCounter = new ByteCounter();
+		var resCounter = new ByteCounter();
 		
 		const srvUrl = url.parse(`http://${req.url}`);
 		const srvSocket = net.connect(srvUrl.port, srvUrl.hostname, () => {
@@ -69,7 +70,7 @@ function createDefaultHandler(options)
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
-				console.log(`RES ${cltSocket.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+				console.log(`RES ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${reqCounter.bytesPiped} ${resCounter.bytesPiped} ${stat.ellipse}`);
 			}
 		});
 		
@@ -117,14 +118,15 @@ function createDefaultHandler(options)
 	
 	function proxyRequest(/* IncomingMessage */ req, /* ServerResponse */ res) 
 	{
+		var remoteAddress = ipv4(req.connection.remoteAddress);
+		
 		var stat = {
-				bytesRead: 0,
-				bytesWrite: 0,
-				ellipse: Date.now(),
+				statusCode: '-',
+				ellipse: Date.now()
 		};
 		
-		var reqCounter = new ByteCounter(() => stat.bytesRead = reqCounter.bytesPiped);
-		var resCounter = new ByteCounter(() => stat.bytesWrite = resCounter.bytesPiped);
+		var reqCounter = new ByteCounter();
+		var resCounter = new ByteCounter();
 	
 		/*********************************************
 		 * req handler
@@ -176,7 +178,7 @@ function createDefaultHandler(options)
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
-				console.log(`RES ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+				console.log(`RES ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${reqCounter.bytesPiped} ${resCounter.bytesPiped} ${stat.ellipse}`);
 			}
 		});
 		
@@ -194,7 +196,7 @@ function createDefaultHandler(options)
 		
 		if ( logEvent )
 		{
-			console.log(`REQ ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+			console.log(`REQ ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
 		}
 		
 		if ( !/^http:\/\/[0-9a-z\-]+/i.test(req.url) )
@@ -297,7 +299,7 @@ function createDefaultHandler(options)
 			{
 				var content = `<html><body>${e.message}</body></html>`;
 				stat.statusCode = 503;
-				stat.bytesWrite = Buffer.byteLength(content);
+				resCounter.bytesPiped = Buffer.byteLength(content);
 				res.writeHead(503, 'Resource Unavailable');
 				res.end(content);
 				responseSent = true;

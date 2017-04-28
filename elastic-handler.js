@@ -18,6 +18,7 @@ const Transform = stream.Transform;
 const ByteCounter = rnju.stream.ByteCounter;
 const rawHeadersToMap = rnju.http.rawHeadersToMap;
 const getOption = rnju.common.getOption;
+const ipv4 = rnju.common.ipv4;
 
 function createElasticHandler(workerPool, options)
 {
@@ -27,23 +28,23 @@ function createElasticHandler(workerPool, options)
 	
 	function proxyConnect(/* IncomingMessage */ req, /* Socket */ cltSocket, /* Buffer */ head) 
 	{
+		var remoteAddress = ipv4(cltSocket.remoteAddress);
+		
 		if ( logEvent )
 		{
-			console.log(`REQ ${cltSocket.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+			console.log(`REQ ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
 		}
 		
 		var responseSent = false;
 		var isPiped = false;
 		
 		var stat = {
-				bytesRead: 0,
-				bytesWrite: 0,
 				statusCode: 200,
 				ellipse: Date.now(),
 		};
 		
-		var reqCounter = new ByteCounter(() => stat.bytesRead = reqCounter.bytesPiped);
-		var resCounter = new ByteCounter(() => stat.bytesWrite = resCounter.bytesPiped);
+		var reqCounter = new ByteCounter();
+		var resCounter = new ByteCounter();
 		
 		var session = workerPool.createSession('HTTP', ['CONNECT']);
 		var resParser = new HTTPParser(HTTPParser.RESPONSE);
@@ -122,9 +123,15 @@ function createElasticHandler(workerPool, options)
 		/** client socket events **/
 		/**************************/
 		
+		cltSocket._endEventOccured = false;
+		
 		function onCltSocketCloseOrError()
 		{
 			if ( !isPiped )
+			{
+				session.destroy();
+			}
+			else if ( !cltSocket._endEventOccured )
 			{
 				session.destroy();
 			}
@@ -135,6 +142,7 @@ function createElasticHandler(workerPool, options)
 			{
 				console.log('server "connect" cltSocket "end"');
 			}
+			cltSocket._endEventOccured = true;
 			onCltSocketCloseOrError();
 		});
 		
@@ -146,7 +154,7 @@ function createElasticHandler(workerPool, options)
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
-				console.log(`RES ${cltSocket.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+				console.log(`RES ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${reqCounter.bytesPiped} ${resCounter.bytesPiped} ${stat.ellipse}`);
 			}
 			onCltSocketCloseOrError();
 		});
@@ -225,14 +233,14 @@ function createElasticHandler(workerPool, options)
 	
 	function proxyRequest(/* IncomingMessage */ req, /* ServerResponse */ res) 
 	{
-	
+		var remoteAddress = ipv4(req.connection.remoteAddress);
+		
 		var stat = {
-				bytesRead: 0,
 				bytesWrite: 0,
 				ellipse: Date.now(),
 		};
 		
-		var reqCounter = new ByteCounter(() => stat.bytesRead = reqCounter.bytesPiped);
+		var reqCounter = new ByteCounter();
 		
 		/*********************************************
 		 * request proxying
@@ -242,7 +250,7 @@ function createElasticHandler(workerPool, options)
 		
 		if ( logEvent )
 		{
-			console.log(`REQ ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
+			console.log(`REQ ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}"`);
 		}
 		
 		if ( !/^http:\/\/[0-9a-z\-]+/i.test(req.url) )
@@ -409,7 +417,7 @@ function createElasticHandler(workerPool, options)
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
-				console.log(`RES ${req.connection.remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+				console.log(`RES ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${reqCounter.bytesPiped} ${stat.bytesWrite} ${stat.ellipse}`);
 			}
 		});
 		

@@ -63,35 +63,18 @@ function createElasticWorker(options)
 		var isPiped = false;
 		
 		var stat = {
-				bytesRead: 0,
-				bytesWrite: 0,
 				statusCode: 200,
 				ellipse: Date.now(),
 		};
 		
-		var reqCounter = new ByteCounter(() => stat.bytesRead = reqCounter.bytesPiped);
-		var resCounter = new ByteCounter(() => stat.bytesWrite = resCounter.bytesPiped);
+		var reqCounter = new ByteCounter();
+		var resCounter = new ByteCounter();
 		
 		const srvUrl = url.parse(`http://${info.url}`);
 		
 		/***********************
 		 * server socket events 
 		 ***********************/
-		
-		function onSrvSocketClosedOrError()
-		{
-			if ( !responseSent )
-			{
-				stat.statusCode = 500;
-				session.write('HTTP/1.1 500 Connection Error\r\n\r\n');
-				responseSent = true;
-			}
-			
-			if ( !isPiped )
-			{
-				session.end();
-			}
-		}
 		
 		const srvSocket = net.connect(srvUrl.port, srvUrl.hostname, () => {
 			
@@ -113,11 +96,33 @@ function createElasticWorker(options)
 			isPiped = true;
 		});
 		
+		srvSocket._endEventOccured = false;
+
+		function onSrvSocketClosedOrError()
+		{
+			if ( !responseSent )
+			{
+				stat.statusCode = 500;
+				session.write('HTTP/1.1 500 Connection Error\r\n\r\n');
+				responseSent = true;
+			}
+			
+			if ( !isPiped )
+			{
+				session.end();
+			}
+			else if ( !srvSocket._endEventOccured )
+			{
+				session.destroy();
+			}
+		}
+		
 		srvSocket.on('end', (had_error) => {
 			if ( logEvent )
 			{
 				console.log('onConnect srvSocket "end"');
 			}
+			srvSocket._endEventOccured = true;
 			onSrvSocketClosedOrError();
 		});
 		
@@ -168,7 +173,7 @@ function createElasticWorker(options)
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
-				console.log(`RES ${session.address} "${info.method} ${info.url}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+				console.log(`RES ${session.address} "${info.method} ${info.url}" ${stat.statusCode} ${reqCounter.bytesPiped} ${resCounter.bytesPiped} ${stat.ellipse}`);
 			}
 			onSessionCloseOrError();
 		});
@@ -296,7 +301,6 @@ function createElasticWorker(options)
 		
 		var stat = {
 				bytesRead: 0,
-				bytesWrite: 0,
 				statusCode: 200,
 				ellipse: Date.now(),
 		};
@@ -304,7 +308,7 @@ function createElasticWorker(options)
 		var responseSent = false;
 		var isPiped = false;
 		
-		var resCounter = new ByteCounter(() => stat.bytesWrite = resCounter.bytesPiped);
+		var resCounter = new ByteCounter();
 	
 		reqParser.onHeadersComplete = function(info) {
 	
@@ -337,12 +341,12 @@ function createElasticWorker(options)
 					var message = e ? e.message : 'ERROR';
 					var content = `<html><body>${message}</body></html>`;
 					stat.statusCode = 503;
-					stat.bytesWrite = Buffer.byteLength(content);
+					resCounter.bytesPiped = Buffer.byteLength(content);
 					var date = new Date().toUTCString();
 					
 					var response = 'HTTP/1.1 500 Server Error\r\n';
 					response += 'Content-Type: text/html\r\n';
-					response += `Content-Length: ${stat.bytesWrite}\r\n`;
+					response += `Content-Length: ${resCounter.bytesPiped}\r\n`;
 					response += `Date: ${date}\r\n\r\n`;
 					response += content;
 					
@@ -443,7 +447,7 @@ function createElasticWorker(options)
 				console.log(`len: ${len}`);
 			}
 			var chunk = data.slice(offset, offset+len);
-			stat.bytesWrite += len;
+			stat.bytesRead += len;
 			if ( req2 )
 			{
 				req2.write(chunk);
@@ -500,7 +504,7 @@ function createElasticWorker(options)
 			if ( logAccess )
 			{
 				stat.ellipse = Date.now() - stat.ellipse;
-				console.log(`RES ${session.address} "${stat.method} ${stat.url}" ${stat.statusCode} ${stat.bytesRead} ${stat.bytesWrite} ${stat.ellipse}`);
+				console.log(`RES ${session.address} "${stat.method} ${stat.url}" ${stat.statusCode} ${stat.bytesRead} ${resCounter.bytesPiped} ${stat.ellipse}`);
 			}
 			onSessionCloseOrError();
 		});
