@@ -201,8 +201,8 @@ function createDefaultHandler(options)
 		
 		if ( !/^http:\/\/[0-9a-z\-]+/i.test(req.url) )
 		{
-			res.writeHead(404);
-			res.end();
+			res.writeHead(200);
+			res.end('OK');
 			return;
 		}
 		
