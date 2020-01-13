@@ -44,61 +44,10 @@ function createDefaultHandler(options)
 		var resCounter = new ByteCounter();
 		
 		const srvUrl = url.parse(`http://${req.url}`);
-		const srvSocket = net.connect(srvUrl.port, srvUrl.hostname, () => {
-			
-			cltSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
-			responseSent = true;
-			
-			srvSocket.write(head);
-			
-			cltSocket.pipe(reqCounter).pipe(srvSocket);
-			srvSocket.pipe(resCounter).pipe(cltSocket);
-		});
-		
-		cltSocket.on('end', (had_error) => {
-			if ( logEvent )
-			{
-				console.log('server "connect" cltSocket "end"');
-			}
-		});
-		
-		cltSocket.on('close', (had_error) => {
-			if ( logEvent )
-			{
-				console.log('server "connect" cltSocket "close"');
-			}
-			if ( logAccess )
-			{
-				stat.ellipse = Date.now() - stat.ellipse;
-				console.log(`RES ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${reqCounter.bytesPiped} ${resCounter.bytesPiped} ${stat.ellipse}`);
-			}
-		});
-		
-		cltSocket.on('error', (e) => {
-			if ( logError )
-			{
-				console.log('server "connect" cltSocket "error"');
-				console.log(e);
-			}
-			srvSocket.destroy();
-			cltSocket.destroy();
-		});
-		
-		srvSocket.on('end', (had_error) => {
-			if ( logEvent )
-			{
-				console.log('server "connect" srvSocket "end"');
-			}
-		});
-		
-		srvSocket.on('close', (had_error) => {
-			if ( logEvent )
-			{
-				console.log('server "connect" srvSocket "close"');
-			}
-		});
-		
-		srvSocket.on('error', (e) => {
+
+		var srvSocket = null;
+
+		function handleSrvError(e) {
 			if ( !responseSent )
 			{
 				stat.statusCode = 500;
@@ -112,8 +61,82 @@ function createDefaultHandler(options)
 			}
 			
 			cltSocket.destroy();
-			srvSocket.destroy();
-		});
+			if ( srvSocket ) {
+				srvSocket.destroy();
+			}
+		}
+
+		try {
+
+			/* fix invalid port number */
+			var srvUrlPort = srvUrl.port * 1;
+			if ( !srvUrlPort ) {
+				console.log(srvUrl);
+				console.log('Invalid port changed to 443');
+				srvUrlPort = 443;
+			}
+
+			srvSocket = net.connect(srvUrlPort, srvUrl.hostname, () => {
+				
+				cltSocket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+				responseSent = true;
+				
+				srvSocket.write(head);
+				
+				cltSocket.pipe(reqCounter).pipe(srvSocket);
+				srvSocket.pipe(resCounter).pipe(cltSocket);
+			});
+			
+			cltSocket.on('end', (had_error) => {
+				if ( logEvent )
+				{
+					console.log('server "connect" cltSocket "end"');
+				}
+			});
+			
+			cltSocket.on('close', (had_error) => {
+				if ( logEvent )
+				{
+					console.log('server "connect" cltSocket "close"');
+				}
+				if ( logAccess )
+				{
+					stat.ellipse = Date.now() - stat.ellipse;
+					console.log(`RES ${remoteAddress} "${req.method} ${req.url} HTTP/${req.httpVersion}" ${stat.statusCode} ${reqCounter.bytesPiped} ${resCounter.bytesPiped} ${stat.ellipse}`);
+				}
+			});
+			
+			cltSocket.on('error', (e) => {
+				if ( logError )
+				{
+					console.log('server "connect" cltSocket "error"');
+					console.log(e);
+				}
+				srvSocket.destroy();
+				cltSocket.destroy();
+			});
+			
+			srvSocket.on('end', (had_error) => {
+				if ( logEvent )
+				{
+					console.log('server "connect" srvSocket "end"');
+				}
+			});
+			
+			srvSocket.on('close', (had_error) => {
+				if ( logEvent )
+				{
+					console.log('server "connect" srvSocket "close"');
+				}
+			});
+			
+			srvSocket.on('error', (e) => {
+					handleSrvError(e);
+			});
+		}
+		catch (e) {
+			handleSrvError(e);
+		}
 	}
 	
 	function proxyRequest(/* IncomingMessage */ req, /* ServerResponse */ res) 
