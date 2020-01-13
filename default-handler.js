@@ -245,11 +245,18 @@ function createDefaultHandler(options)
 			
 			//console.log(res2);
 			
+			try {
 			stat.statusCode = res2.statusCode;
 			res.writeHead(res2.statusCode, res2.statusMessage, rawHeadersToMap(res2.rawHeaders));
 			responseSent = true;
 			
 			res2.pipe(resCounter).pipe(res);
+			}
+			catch (e) {
+				console.log(`ERROR ${req.url}`);
+				console.log(e);
+				writeErrorResponse(e.message);
+			}
 		});
 		
 		req2.on('abort', () => {
@@ -297,12 +304,7 @@ function createDefaultHandler(options)
 		req2.on('error', (e) => {
 			if ( !responseSent )
 			{
-				var content = `<html><body>${e.message}</body></html>`;
-				stat.statusCode = 503;
-				resCounter.bytesPiped = Buffer.byteLength(content);
-				res.writeHead(503, 'Resource Unavailable');
-				res.end(content);
-				responseSent = true;
+				writeErrorResponse(e.message);
 			}
 			else
 			{
@@ -317,6 +319,15 @@ function createDefaultHandler(options)
 				console.log(e);
 			}
 		});
+		
+		function writeErrorResponse(message) {
+			var content = `<html><body>${message}</body></html>`;
+			stat.statusCode = 503;
+			resCounter.bytesPiped = Buffer.byteLength(content);
+			res.writeHead(503, 'Resource Unavailable');
+			res.end(content);
+			responseSent = true;
+		}
 		
 		req.pipe(reqCounter).pipe(req2);
 	}
