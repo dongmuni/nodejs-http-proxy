@@ -25,6 +25,7 @@ function createElasticHandler(workerPool, options)
 	var logEvent  = getOption(options, 'logEvent', false);
 	var logError  = getOption(options, 'logError', true);
 	var logAccess = getOption(options, 'logAccess', true);
+	var lowerCaseHeaderName = getOption(options, 'lowerCaseHeaderName', false);
 	
 	function proxyConnect(/* IncomingMessage */ req, /* Socket */ cltSocket, /* Buffer */ head) 
 	{
@@ -267,7 +268,8 @@ function createElasticHandler(workerPool, options)
 		{
 			if ( requestHeaders.hasOwnProperty(name) )
 			{
-				requestHeader += name + ': ' + requestHeaders[name] + '\r\n';
+				requestHeader += (lowerCaseHeaderName ? (name + '').toLowerCase() : name) 
+								+ ': ' + requestHeaders[name] + '\r\n';
 			}
 		}
 		requestHeader += '\r\n';
