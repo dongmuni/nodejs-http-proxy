@@ -27,7 +27,7 @@ let workerOptions = {
     },
     proxyOptions: {
         logEvent: false,
-        logError: true,
+        logError: false,
         logAccess: true,
         compressRequest: compressRequest
     }
@@ -55,7 +55,7 @@ let serverOptions = {
         ports: [9090],
         backlog: 1024,
         logEvent: false,
-        logError: true,
+        logError: false,
         logAccess: true,
         compressRequest: compressRequest
     }
