@@ -5,8 +5,8 @@
  */
 
 [
-	'default-handler', 
-	'elastic-handler', 
+	'default-handler',
+	'elastic-handler',
 	'elastic-worker',
 	'proxy'
 ].forEach((path) => Object.assign(module.exports, require(`./${path}`)));
