@@ -70,9 +70,12 @@ function startServer(options) {
 
 	function createServer(serverOptions) {
 		var server = http.createServer();
+		let logEvent = serverOptions && serverOptions.proxyOptions && serverOptions.proxyOptions.logEvent;
 
 		server.on('checkContinue', (req, res) => {
-			console.log('server "checkContinue"');
+			if (logEvent) {
+				console.log('server "checkContinue"');
+			}
 			res.writeContinue();
 			server.emit('request', req, res);
 		});

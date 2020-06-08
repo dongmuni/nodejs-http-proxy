@@ -8,6 +8,7 @@ const net = require('net');
 const stream = require('stream');
 const HTTPParser = require('http-parser-js').HTTPParser;
 const rnju = require('@rankwave/nodejs-util');
+const zlib = require('zlib');
 
 const Transform = stream.Transform;
 const ByteCounter = rnju.stream.ByteCounter;
@@ -48,6 +49,7 @@ function createElasticWorker(options) {
 	var logEvent = getOption(options, 'logEvent', false);
 	var logError = getOption(options, 'logError', true);
 	var logAccess = getOption(options, 'logAccess', true);
+	var compressRequest = getOption(options, 'compressRequest', false);
 
 	function onConnect(info, session, head) {
 		if (logEvent) {
@@ -257,6 +259,12 @@ function createElasticWorker(options) {
 			console.log('onHttpRequestSession');
 		}
 
+		var readable = session;
+		if (compressRequest) {
+			readable = zlib.createGunzip();
+			session.pipe(readable);
+		}
+
 		var reqParser = new HTTPParser(HTTPParser.REQUEST);
 
 		/******************************
@@ -361,10 +369,17 @@ function createElasticWorker(options) {
 				}
 				responseHeader += '\r\n';
 
-				session.write(responseHeader);
+				var writable = session;
+
+				if (compressRequest) {
+					writable = zlib.createGzip();
+					writable.pipe(session);
+				}
+
+				writable.write(responseHeader);
 				responseSent = true;
 
-				res2.pipe(resCounter).pipe(session);
+				res2.pipe(resCounter).pipe(writable);
 				isPiped = true;
 			});
 
@@ -397,7 +412,7 @@ function createElasticWorker(options) {
 		reqParser.onBody = function (data, offset, len) {
 			if (logEvent) {
 				console.log('onHttpSession reqParser "onBody"');
-				console.log(`len: ${len}`);
+				console.log(`onHttpSession reqParser "onBody": len: ${len}`);
 			}
 			var chunk = data.slice(offset, offset + len);
 			stat.bytesRead += len;
@@ -419,14 +434,14 @@ function createElasticWorker(options) {
 		 * session events
 		 ******************************/
 
-		session.on('data', (chunk) => {
+		readable.on('data', (chunk) => {
 			if (logEvent) {
 				console.log('onHttpSession session "data"');
 			}
 			reqParser.execute(chunk);
 		});
 
-		session.on('end', (had_error) => {
+		readable.on('end', (had_error) => {
 			if (logEvent) {
 				console.log('onHttpSession session "end"');
 			}

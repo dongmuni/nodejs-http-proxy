@@ -4,6 +4,8 @@
 
 const eproxy = require('./index.js');
 
+let compressRequest = true;
+
 let workerOptions = {
     textNetOptions: {
         // config for active worker
@@ -25,8 +27,9 @@ let workerOptions = {
     },
     proxyOptions: {
         logEvent: false,
-        logError: false,
-        logAccess: true
+        logError: true,
+        logAccess: true,
+        compressRequest: compressRequest
     }
 };
 
@@ -39,8 +42,6 @@ let serverOptions = {
 
         // config for active server
         workerAddresses: [
-            { host: 'localhost', port: 9102 },
-            { host: 'localhost', port: 9102 },
             { host: 'localhost', port: 9102 }
         ],
         idlePingTimeout: 30000,
@@ -54,8 +55,9 @@ let serverOptions = {
         ports: [9090],
         backlog: 1024,
         logEvent: false,
-        logError: false,
-        logAccess: true
+        logError: true,
+        logAccess: true,
+        compressRequest: compressRequest
     }
 };
 

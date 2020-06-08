@@ -10,6 +10,7 @@ const url = require('url');
 const stream = require('stream');
 const HTTPParser = require('http-parser-js').HTTPParser;
 const rnju = require('@rankwave/nodejs-util');
+const zlib = require('zlib');
 
 const Transform = stream.Transform;
 const ByteCounter = rnju.stream.ByteCounter;
@@ -22,6 +23,7 @@ function createElasticHandler(workerPool, options) {
 	var logError = getOption(options, 'logError', true);
 	var logAccess = getOption(options, 'logAccess', true);
 	var lowerCaseHeaderName = getOption(options, 'lowerCaseHeaderName', false);
+	var compressRequest = getOption(options, 'compressRequest', false);
 
 	function proxyConnect(/* IncomingMessage */ req, /* Socket */ cltSocket, /* Buffer */ head) {
 		var remoteAddress = ipv4(cltSocket.remoteAddress);
@@ -246,8 +248,15 @@ function createElasticHandler(workerPool, options) {
 		requestHeader += '\r\n';
 
 		var session = workerPool.createSession('HTTP', [req.method]);
-		session.write(requestHeader);
-		req.pipe(reqCounter).pipe(session);
+		var writable = session;
+
+		if (compressRequest) {
+			writable = zlib.createGzip();
+			writable.pipe(session);
+		}
+
+		writable.write(requestHeader);
+		req.pipe(reqCounter).pipe(writable);
 
 		/*********************************************
 		 * respose parser events
@@ -265,10 +274,14 @@ function createElasticHandler(workerPool, options) {
 		};
 
 		resParser.onBody = function (data, offset, len) {
-			//console.log('server "request" resParser "onBody"');
+			if (logEvent) {
+				console.log('server "request" resParser "onBody"');
+			}
 			var chunk = data.slice(offset, offset + len);
 			stat.bytesWrite += chunk.length;
-			//console.log(`recv body: ${chunk.length}`);
+			if (logEvent) {
+				console.log(`server "request" resParser "onBody": recv body: ${chunk.length}`);
+			}
 			res.write(chunk);
 		};
 
@@ -291,12 +304,21 @@ function createElasticHandler(workerPool, options) {
 		 * worker session events
 		 *********************************************/
 
-		session.on('data', (chunk) => {
-			//console.log('server "request" session "data"');
+		var readable = session;
+
+		if (compressRequest) {
+			readable = zlib.createGunzip();
+			session.pipe(readable);
+		}
+
+		readable.on('data', (chunk) => {
+			if (logEvent) {
+				console.log('server "request" session "data"');
+			}
 			resParser.execute(chunk);
 		});
 
-		session.on('end', () => {
+		readable.on('end', () => {
 			if (logEvent) {
 				console.log('server "request" session "end"');
 			}
@@ -312,17 +334,20 @@ function createElasticHandler(workerPool, options) {
 			res.end();
 		}
 
-		session.on('close', (e) => {
-			if (e) {
-				if (logError) {
-					console.log('server "request" session "close"');
-					console.log(e);
-				}
+		/**
+		 * [NOTICE]
+		 * When using gunzip, do not use the session.on('close') event handler, 
+		 * but use readable.on('close') because the session'close' event falls 
+		 * before the'data' and'end' of gunzip. .
+		 */
+		readable.on('close', () => {
+			if (logEvent) {
+				console.log('server "request" session "close"');
 			}
 			onSessionCloseOrError();
 		});
 
-		session.on('error', (e) => {
+		readable.on('error', (e) => {
 			if (logError) {
 				console.log('server "request" session "error"');
 				console.log(e);
