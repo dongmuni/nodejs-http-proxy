@@ -27,7 +27,7 @@ function startServer(options) {
 	 * worker listener
 	 */
 
-	if (textNetOptions.port) {
+	if (textNetOptions && textNetOptions.port) {
 		textNetOptions.workerPool = workerPool;
 		textNet.startWorkerPoolServer(textNetOptions, (server) => {
 			console.log(`Worker Server Started (port: ${textNetOptions.port})`);
@@ -38,7 +38,7 @@ function startServer(options) {
 	 * worker connector
 	 */
 
-	if (textNetOptions.workerAddresses && textNetOptions.workerAddresses.length) {
+	if (textNetOptions && textNetOptions.workerAddresses && textNetOptions.workerAddresses.length) {
 		textNetOptions.workerAddresses.forEach(addr => {
 			var workerOptions = Object.assign({}, textNetOptions, addr);
 			textNet.autoReconnect(workerOptions, (client) => {
