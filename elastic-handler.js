@@ -376,7 +376,7 @@ function createElasticHandler(workerPool, options) {
 			if (logEvent) {
 				console.log('server "request" req "close"');
 			}
-			onRequestCloseOrError();
+			session.end();
 		});
 
 		req.on('error', (e) => {
