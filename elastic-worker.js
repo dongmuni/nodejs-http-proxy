@@ -7,7 +7,7 @@ const url = require('url');
 const net = require('net');
 const stream = require('stream');
 const HTTPParser = require('http-parser-js').HTTPParser;
-const rnju = require('@rankwave/nodejs-util');
+const rnju = require('@dongmuni/nodejs-util');
 const zlib = require('zlib');
 
 const Transform = stream.Transform;

@@ -10,7 +10,7 @@ const http = require('http');
 const url = require('url');
 const net = require('net');
 const stream = require('stream');
-const rnju = require('@rankwave/nodejs-util');
+const rnju = require('@dongmuni/nodejs-util');
 
 const Transform = stream.Transform;
 const ByteCounter = rnju.stream.ByteCounter;
